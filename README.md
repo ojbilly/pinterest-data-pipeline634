@@ -5,6 +5,7 @@
 - [Installation Instructions](#installation-instructions)
 - [Usage Instructions](#usage-instructions)
 - [AWS Resources Setup](#aws-resources-setup)
+- [Databricks Integration](#databricks-integration)
 - [File Structure](#file-structure)
 - [Security Considerations](#security-considerations)
 - [License](#license)
@@ -12,7 +13,7 @@
 ---
 
 ## Project Description
-This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 instance using **Kafka** to process user posting data. Pinterest processes billions of data points daily, and this project aims to simulate a similar system using **AWS Cloud**.
+This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 instance using **Kafka** to process user posting data. Pinterest processes billions of data points daily, and this project simulates a similar system using **AWS Cloud**, **Kafka**, **S3**, and **Databricks**.
 
 ### **Objectives:**
 - Set up and connect to an **EC2 instance** with Kafka pre-installed.
@@ -20,7 +21,8 @@ This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 ins
 - Securely store database credentials in a separate file.
 - Use **RDS database** containing Pinterest-like data.
 - Create and configure **S3 bucket** to store streamed data.
-- Use **Kafka REST Proxy** and **S3 Sink Connector** for data streaming.
+- Use **Kafka REST Proxy** for data streaming.
+- Load and clean the data using **Databricks** notebooks.
 - Document all progress in a structured README file.
 
 ### **What I Learned:**
@@ -30,6 +32,7 @@ This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 ins
 - Creating and configuring an **S3 bucket** with proper IAM roles.
 - Installing and using **Kafka Connect** and the **S3 Sink Connector**.
 - Sending data through a **Kafka REST Proxy** endpoint to topics.
+- Reading batch data into **Databricks** with Spark and displaying DataFrames.
 - Storing sensitive credentials securely in **YAML files**.
 - Using **AWS Systems Manager** to execute commands remotely.
 
@@ -118,6 +121,37 @@ topics/<your_UserId>.pin/partition=0/
 topics/<your_UserId>.geo/partition=0/
 topics/<your_UserId>.user/partition=0/
 ```
+
+---
+
+## Databricks Integration
+
+### **Step 1: Create Account and Notebook**
+- Created free community Databricks account.
+- Created and configured a cluster.
+- Created a notebook `pinterest_note` to run Spark queries.
+
+### **Step 2: Configure S3 Access**
+```python
+spark._jsc.hadoopConfiguration().set("fs.s3a.access.key", "<ACCESS_KEY>")
+spark._jsc.hadoopConfiguration().set("fs.s3a.secret.key", "<SECRET_KEY>")
+spark._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "s3.eu-west-1.amazonaws.com")
+```
+
+### **Step 3: Load JSON data into DataFrames**
+```python
+df_pin = spark.read.json("s3a://kafka-bucket-osaze/topics/testbuck1.pin/partition=0/")
+df_geo = spark.read.json("s3a://kafka-bucket-osaze/topics/testbuck1.geo/partition=0/")
+df_user = spark.read.json("s3a://kafka-bucket-osaze/topics/testbuck1.user/partition=0/")
+
+# Display
+print(df_pin.show(5))
+print(df_geo.show(5))
+print(df_user.show(5))
+```
+
+All data was successfully queried in Databricks with the schema printed. Ready for further cleaning and transformations.
+
 ---
 
 ## File Structure
@@ -136,6 +170,7 @@ topics/<your_UserId>.user/partition=0/
 - **IAM role attached to EC2** securely grants access to S3.
 - **Kafka topics access** limited to local EC2 or secured proxies.
 - **MySQL RDS access** limited via **security group rules**.
+- **S3 read access** controlled through IAM and secret keys for Databricks only.
 
 ---
 
