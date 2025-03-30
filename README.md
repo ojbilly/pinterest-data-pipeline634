@@ -23,6 +23,7 @@ This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 ins
 - Create and configure **S3 bucket** to store streamed data.
 - Use **Kafka REST Proxy** for data streaming.
 - Load and clean the data using **Databricks** notebooks.
+- Perform advanced data analysis with Spark.
 - Document all progress in a structured README file.
 
 ### **What I Learned:**
@@ -32,7 +33,9 @@ This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 ins
 - Creating and configuring an **S3 bucket** with proper IAM roles.
 - Installing and using **Kafka Connect** and the **S3 Sink Connector**.
 - Sending data through a **Kafka REST Proxy** endpoint to topics.
-- Reading batch data into **Databricks** with Spark and displaying DataFrames.
+- Reading and cleaning batch data in **Databricks** using Spark.
+- Performing transformations such as column renaming, data type casting, and filtering.
+- Conducting queries to analyze post trends, user behavior, and demographics.
 - Storing sensitive credentials securely in **YAML files**.
 - Using **AWS Systems Manager** to execute commands remotely.
 
@@ -150,7 +153,11 @@ print(df_geo.show(5))
 print(df_user.show(5))
 ```
 
-All data was successfully queried in Databricks with the schema printed. Ready for further cleaning and transformations.
+### **Step 4: Clean and Analyze Data**
+- Replaced nulls and casted data types in `df_pin`
+- Added `coordinates` array and converted timestamps in `df_geo`
+- Created `user_name`, casted join dates, and grouped by age in `df_user`
+- Queried popular categories, median follower counts, and age-based posting behavior
 
 ---
 
