@@ -6,6 +6,7 @@
 - [Usage Instructions](#usage-instructions)
 - [AWS Resources Setup](#aws-resources-setup)
 - [Databricks Integration](#databricks-integration)
+- [Airflow Automation](#airflow-automation)
 - [File Structure](#file-structure)
 - [Security Considerations](#security-considerations)
 - [License](#license)
@@ -13,7 +14,7 @@
 ---
 
 ## Project Description
-This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 instance using **Kafka** to process user posting data. Pinterest processes billions of data points daily, and this project simulates a similar system using **AWS Cloud**, **Kafka**, **S3**, and **Databricks**.
+This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 instance using **Kafka** to process user posting data. Pinterest processes billions of data points daily, and this project simulates a similar system using **AWS Cloud**, **Kafka**, **S3**, **Databricks**, and **Apache Airflow**.
 
 ### **Objectives:**
 - Set up and connect to an **EC2 instance** with Kafka pre-installed.
@@ -23,7 +24,7 @@ This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 ins
 - Create and configure **S3 bucket** to store streamed data.
 - Use **Kafka REST Proxy** for data streaming.
 - Load and clean the data using **Databricks** notebooks.
-- Perform advanced data analysis with Spark.
+- Schedule transformation jobs via **Apache Airflow**.
 - Document all progress in a structured README file.
 
 ### **What I Learned:**
@@ -35,9 +36,8 @@ This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 ins
 - Sending data through a **Kafka REST Proxy** endpoint to topics.
 - Reading and cleaning batch data in **Databricks** using Spark.
 - Performing transformations such as column renaming, data type casting, and filtering.
-- Conducting queries to analyze post trends, user behavior, and demographics.
+- Using **Apache Airflow locally** to trigger transformation workflows.
 - Storing sensitive credentials securely in **YAML files**.
-- Using **AWS Systems Manager** to execute commands remotely.
 
 ---
 
@@ -161,12 +161,39 @@ print(df_user.show(5))
 
 ---
 
+## Airflow Automation
+
+### **Step 1: Install Airflow Locally**
+```bash
+python -m venv airflow_venv
+source airflow_venv/bin/activate
+pip install apache-airflow
+```
+
+### **Step 2: Initialize and Run Airflow**
+```bash
+export AIRFLOW_HOME=~/airflow
+airflow db init
+airflow webserver --port 8080  # Run in one terminal
+airflow scheduler              # Run in another terminal
+```
+
+### **Step 3: Create DAG to Trigger Databricks Notebook**
+- Exported the Databricks notebook as a `.py` script
+- Created `run_notebook_dag.py` inside `$AIRFLOW_HOME/dags`
+- Used `PythonOperator` to execute script logic
+
+---
+
 ## File Structure
 ```
 |-- pinterest-data-pipeline/
 |   |-- kafka/                        # Kafka installation directory
 |   |-- user_posting_emulation.py    # Script to fetch and send data to Kafka
 |   |-- db_creds.yaml                # Secure database credentials file (gitignored)
+|   |-- dags/                        # Airflow DAGs directory
+|   |   |-- run_notebook_dag.py      # DAG that runs the exported Databricks notebook
+|   |   |-- scripts/                 # Python scripts triggered by Airflow DAG
 |   |-- README.md                    # Documentation (this file)
 ```
 
@@ -178,6 +205,7 @@ print(df_user.show(5))
 - **Kafka topics access** limited to local EC2 or secured proxies.
 - **MySQL RDS access** limited via **security group rules**.
 - **S3 read access** controlled through IAM and secret keys for Databricks only.
+- **Airflow environment variables** are used to store secrets securely.
 
 ---
 
