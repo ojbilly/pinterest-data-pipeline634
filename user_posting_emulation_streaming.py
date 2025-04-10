@@ -49,16 +49,17 @@ def send_to_kinesis(payload: dict, partition_key: str, invoke_url: str):
     url = invoke_url
 
     data = {
-    "Data": json.dumps(payload, default=json_serializer),
+    "StreamName": "my-pin-stream",
+    "Data": payload,
     "PartitionKey": partition_key
     }
 
 
     print(f"📤 Sending to Kinesis | URL: {url}")
-    print(f"🧾 Payload: {json.dumps(data, indent=2)}")  # Debug
+    #print(f"🧾 Payload: {json.dumps(data, indent=2)}")  # Debug
 
     try:
-        response = requests.post(url, headers=headers, data=json.dumps(data))
+        response = requests.put(url, headers=headers, data=json.dumps(data, default=str))
         print(f"🔁 Status: {response.status_code}")
         print(f"🔙 Response: {response.text}")
     except Exception as e:
@@ -69,7 +70,7 @@ def send_to_kinesis(payload: dict, partition_key: str, invoke_url: str):
 if __name__ == "__main__":
     print("🚀 Starting data emulation to Kinesis")
     engine = new_connector.create_db_connector()
-    invoke_url = "https://y74e4z45o1.execute-api.eu-west-1.amazonaws.com/prod/send"
+    invoke_url = "https://y74e4z45o1.execute-api.eu-west-1.amazonaws.com/prod/streams/my-pin-stream/record"
 
 
     for i in range(5):  # test with smaller number first
@@ -92,9 +93,12 @@ if __name__ == "__main__":
                     text(f"SELECT * FROM user_data LIMIT {random_row}, 1"))][0]
 
             print("📨 Sending records...")
+            # Ensure all datetime objects are serialized before sending
+
             send_to_kinesis(pin_result, "pin", invoke_url)
             send_to_kinesis(geo_result, "geo", invoke_url)
             send_to_kinesis(user_result, "user", invoke_url)
+
 
         except Exception as e:
             print(f"❌ Error during iteration {i + 1}: {e}")
