@@ -7,6 +7,7 @@
 - [AWS Resources Setup](#aws-resources-setup)
 - [Databricks Integration](#databricks-integration)
 - [Airflow Automation](#airflow-automation)
+- [Streaming via Kinesis & Firehose](#streaming-via-kinesis--firehose)
 - [File Structure](#file-structure)
 - [Security Considerations](#security-considerations)
 - [License](#license)
@@ -14,92 +15,61 @@
 ---
 
 ## Project Description
-This project involves setting up a **Pinterest Data Pipeline** on an AWS EC2 instance using **Kafka** to process user posting data. Pinterest processes billions of data points daily, and this project simulates a similar system using **AWS Cloud**, **Kafka**, **S3**, **Databricks**, and **Apache Airflow**.
+This project sets up a Pinterest-style Data Pipeline using AWS (EC2, RDS, S3, Kinesis), Kafka, Apache Airflow, and Databricks. The system streams, stores, processes, and analyzes user posting data.
 
-### **Objectives:**
-- Set up and connect to an **EC2 instance** with Kafka pre-installed.
-- Create **Kafka topics** to process Pinterest post data.
-- Securely store database credentials in a separate file.
-- Use **RDS database** containing Pinterest-like data.
-- Create and configure **S3 bucket** to store streamed data.
-- Use **Kafka REST Proxy** for data streaming.
-- Load and clean the data using **Databricks** notebooks.
-- Schedule transformation jobs via **Apache Airflow**.
-- Document all progress in a structured README file.
-
-### **What I Learned:**
-- Setting up and connecting to an **AWS EC2 instance** using SSH.
-- Managing **Kafka topics** for real-time data streaming.
-- Creating **MySQL RDS instances** and importing data.
-- Creating and configuring an **S3 bucket** with proper IAM roles.
-- Installing and using **Kafka Connect** and the **S3 Sink Connector**.
-- Sending data through a **Kafka REST Proxy** endpoint to topics.
-- Reading and cleaning batch data in **Databricks** using Spark.
-- Performing transformations such as column renaming, data type casting, and filtering.
-- Using **Apache Airflow locally** to trigger transformation workflows.
-- Storing sensitive credentials securely in **YAML files**.
+### Objectives
+- Launch an EC2 instance and set up Kafka
+- Create Kafka topics and use REST Proxy for posting
+- Use an RDS MySQL database with Pinterest-style data
+- Configure S3 buckets and Kafka S3 Sink Connector
+- Use Databricks for transformation and analysis
+- Orchestrate pipelines with Airflow and visualize data
 
 ---
 
 ## Installation Instructions
-### **Step 1: Create a Key Pair**
-1. Navigate to **AWS EC2 > Key Pairs** and create a new key pair.
-2. Save it as `KeyPairName.pem` locally and set permissions:
 
+### 1. Key Pair Setup
 ```bash
 chmod 400 KeyPairName.pem
+ssh -i KeyPairName.pem ubuntu@<ec2-public-ip>
 ```
 
-### **Step 2: Connect to the EC2 Instance**
-```bash
-ssh -i KeyPairName.pem ubuntu@<your-ec2-public-ip>
-```
-
-### **Step 3: Verify Kafka Installation**
-Once logged in:
+### 2. Kafka Verification
 ```bash
 cd ~/kafka
 ls -l
 ```
-You should see Kafka-related files and folders like `zookeeper-server-start.sh`, `kafka-server-start.sh`, etc.
 
 ---
 
 ## Usage Instructions
 
-### **Step 1: Create Kafka Topics**
+### 1. Create Kafka Topics
 ```bash
-bin/kafka-topics.sh --create --topic <your_UserId>.pin --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-bin/kafka-topics.sh --create --topic <your_UserId>.geo --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-bin/kafka-topics.sh --create --topic <your_UserId>.user --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-```
-To verify:
-```bash
-bin/kafka-topics.sh --list --bootstrap-server localhost:9092
+bin/kafka-topics.sh --create --topic <UserId>.pin --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+bin/kafka-topics.sh --create --topic <UserId>.geo --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+bin/kafka-topics.sh --create --topic <UserId>.user --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 ```
 
-### **Step 2: Run Zookeeper and Kafka in Terminals**
-Use **multiple terminal tabs** on EC2:
+### 2. Start Services
 ```bash
-# Tab 1 - Zookeeper
+# Zookeeper
 bin/zookeeper-server-start.sh config/zookeeper.properties
 
-# Tab 2 - Kafka
+# Kafka
 bin/kafka-server-start.sh config/server.properties
 
-# Tab 3 - Kafka Connect
+# Kafka Connect
 bin/connect-distributed.sh config/connect-distributed.properties
 ```
 
-### **Step 3: Modify user_posting_emulation.py**
-This script reads 500 random rows from your database and pushes them to the appropriate Kafka topics via **Kafka REST Proxy**.
-Run the script:
+### 3. Run Data Emulation
 ```bash
 python3 user_posting_emulation.py
 ```
 
-### **Step 4: Monitor Data Sending**
-On EC2, run:
+### 4. Monitor
 ```bash
 journalctl -u kafka-rest.service -f
 ```
@@ -108,111 +78,101 @@ journalctl -u kafka-rest.service -f
 
 ## AWS Resources Setup
 
-### **RDS (MySQL)**
-- Created **MySQL RDS (Free Tier)** via AWS Console.
-- Used **MySQL Workbench** locally to:
-  - Connect using RDS endpoint.
-  - Create schema `pinterest_data`.
-  - Import `pinterest_data_db.sql` to populate tables.
+### RDS (MySQL)
+- Created via AWS Console
+- Populated using `pinterest_data_db.sql`
 
-### **S3 Bucket**
-- Created S3 bucket `testbuck1` via AWS Console.
-- Configured IAM role with `AmazonS3FullAccess` attached to EC2 instance.
-- Bucket path auto-structured by connector as:
-```
-topics/<your_UserId>.pin/partition=0/
-topics/<your_UserId>.geo/partition=0/
-topics/<your_UserId>.user/partition=0/
-```
+### S3 Bucket
+- Bucket name: `kinesis-s3-databrick`
+- Configured IAM and connector to automatically structure streamed data paths
 
 ---
 
 ## Databricks Integration
 
-### **Step 1: Create Account and Notebook**
-- Created free community Databricks account.
-- Created and configured a cluster.
-- Created a notebook `pinterest_note` to run Spark queries.
+### 1. Notebook Development
+- Free Community Databricks account
+- Created notebooks for pulling, cleaning, and saving data
 
-### **Step 2: Configure S3 Access**
+### 2. Load S3 Data
 ```python
-spark._jsc.hadoopConfiguration().set("fs.s3a.access.key", "<ACCESS_KEY>")
-spark._jsc.hadoopConfiguration().set("fs.s3a.secret.key", "<SECRET_KEY>")
-spark._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "s3.eu-west-1.amazonaws.com")
+spark.read.json("s3a://kinesis-s3-databrick/<topic-path>")
 ```
 
-### **Step 3: Load JSON data into DataFrames**
+### 3. Cleaning & Analysis
+- Converted follower counts (e.g., 79k → 79000)
+- Cleaned null values, deduplicated by `unique_id`
+- Used Spark DataFrame transformations
+
+### 4. Saved to Delta Tables
 ```python
-df_pin = spark.read.json("s3a://kafka-bucket-osaze/topics/testbuck1.pin/partition=0/")
-df_geo = spark.read.json("s3a://kafka-bucket-osaze/topics/testbuck1.geo/partition=0/")
-df_user = spark.read.json("s3a://kafka-bucket-osaze/topics/testbuck1.user/partition=0/")
-
-# Display
-print(df_pin.show(5))
-print(df_geo.show(5))
-print(df_user.show(5))
+df.write.format("delta").mode("overwrite").saveAsTable("<UserId>_pin_table")
 ```
-
-### **Step 4: Clean and Analyze Data**
-- Replaced nulls and casted data types in `df_pin`
-- Added `coordinates` array and converted timestamps in `df_geo`
-- Created `user_name`, casted join dates, and grouped by age in `df_user`
-- Queried popular categories, median follower counts, and age-based posting behavior
 
 ---
 
 ## Airflow Automation
 
-### **Step 1: Install Airflow Locally**
+### 1. Airflow Local Setup
 ```bash
 python -m venv airflow_venv
 source airflow_venv/bin/activate
 pip install apache-airflow
-```
-
-### **Step 2: Initialize and Run Airflow**
-```bash
 export AIRFLOW_HOME=~/airflow
 airflow db init
-airflow webserver --port 8080  # Run in one terminal
-airflow scheduler              # Run in another terminal
 ```
 
-### **Step 3: Create DAG to Trigger Databricks Notebook**
-- Exported the Databricks notebook as a `.py` script
-- Created `run_notebook_dag.py` inside `$AIRFLOW_HOME/dags`
-- Used `PythonOperator` to execute script logic
+### 2. DAG and Execution
+- Created a DAG to run exported Databricks notebooks using `PythonOperator`
+
+---
+
+## Streaming via Kinesis & Firehose
+
+### 1. Stream to Kinesis
+- Created `user_posting_emulation_streaming.py`
+- Posted data using API Gateway to `my-pin-stream`
+
+### 2. Connect Firehose to S3
+- Configured delivery stream: `KDS-S3-gjcBX`
+- Data lands in `s3a://kinesis-s3-databrick/`
+
+### 3. Databricks
+- Pulled streaming data from S3
+- Cleaned and transformed in notebooks
+- Saved to Delta tables
 
 ---
 
 ## File Structure
 ```
 |-- pinterest-data-pipeline/
-|   |-- kafka/                        # Kafka installation directory
-|   |-- user_posting_emulation.py    # Script to fetch and send data to Kafka
-|   |-- db_creds.yaml                # Secure database credentials file (gitignored)
-|   |-- dags/                        # Airflow DAGs directory
-|   |   |-- run_notebook_dag.py      # DAG that runs the exported Databricks notebook
-|   |   |-- scripts/                 # Python scripts triggered by Airflow DAG
-|   |-- README.md                    # Documentation (this file)
+|   |-- kafka/
+|   |-- user_posting_emulation.py
+|   |-- user_posting_emulation_streaming.py
+|   |-- db_creds.yaml
+|   |-- dags/
+|   |   |-- run_notebook_dag.py
+|   |   |-- scripts/
+|   |-- notebooks/
+|   |   |-- 1_pull_stream_data.py
+|   |   |-- 2_clean_stream_data.py
+|   |   |-- 3_save_delta_tables.py
+|   |-- README.md
 ```
 
 ---
 
 ## Security Considerations
-- **Never commit credentials**: `db_creds.yaml` is added to **.gitignore**.
-- **IAM role attached to EC2** securely grants access to S3.
-- **Kafka topics access** limited to local EC2 or secured proxies.
-- **MySQL RDS access** limited via **security group rules**.
-- **S3 read access** controlled through IAM and secret keys for Databricks only.
-- **Airflow environment variables** are used to store secrets securely.
+- Secrets like RDS and S3 credentials stored in `.yaml` or environment variables
+- IAM roles scoped to specific services
+- Access restricted via API Gateway and VPC security groups
 
 ---
 
 ## License
-This project is licensed under the **Osaze Omoruyi**.
+Project maintained by **Osaze Omoruyi**.
 
 ---
 
-This README will be continuously updated as more progress is made! 🚀
-
+🚀 Project delivered with AWS, Apache, and Databricks technologies.
